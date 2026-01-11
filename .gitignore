@@ -1,0 +1,19 @@
+
+# Ignore simulation artifacts
+work/
+transcript
+*.vstf
+*.wlf
+
+# Ignore ModelSim/Questa simulation directories
+simulation/
+/output_files/
+*.rpt
+
+modelsim.ini
+uvm_lib
+
+
+*.cache
+*.hw
+*.ip_user_files
