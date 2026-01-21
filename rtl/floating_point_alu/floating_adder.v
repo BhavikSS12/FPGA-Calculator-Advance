@@ -5,7 +5,7 @@ module fp_adder (
     input wire reset,
     input wire [31:0] a,
     input wire [31:0] b,
-    input wire sub,              // 1 for subtraction, 0 for addition
+    input wire sub,          // 1 for subtraction, 0 for addition
     input wire start,
     output reg [31:0] result,
     output reg done,
@@ -31,6 +31,15 @@ module fp_adder (
     wire a_is_inf = `IS_INF(a);
     wire b_is_inf = `IS_INF(b);
     
+    reg signed [8:0] exp_diff;
+    reg [7:0] larger_exp;
+    reg [24:0] mant_a_aligned, mant_b_aligned;
+    reg [24:0] mant_sum;
+    reg result_sign;
+    reg [7:0] result_exp;
+    reg signed [5:0] shift_amt;
+    integer i;
+
     always @(posedge clk or posedge reset) begin
         if (reset) begin
             state <= IDLE;
@@ -64,15 +73,6 @@ module fp_adder (
                             result <= {sign_b, b[30:0]};
                         end
                     end else begin
-                        // Perform addition logic
-                        reg signed [8:0] exp_diff;
-                        reg [7:0] larger_exp;
-                        reg [24:0] mant_a_aligned, mant_b_aligned;
-                        reg [24:0] mant_sum;
-                        reg result_sign;
-                        reg [7:0] result_exp;
-                        integer shift_amt;
-                        
                         // Align exponents
                         exp_diff = exp_a - exp_b;
                         
@@ -109,9 +109,13 @@ module fp_adder (
                             mant_sum = mant_sum >> 1;
                             result_exp = result_exp + 1;
                         end else begin
-                            while (mant_sum[23] == 0 && result_exp > 0 && mant_sum != 0) begin
-                                mant_sum = mant_sum << 1;
-                                result_exp = result_exp - 1;
+                            for (i = 23; i >= 0; i = i - 1) begin
+                                if (mant_sum[i] == 1'b1 || result_exp == 0 || mant_sum == 0) begin
+                                    i = -1; // Break loop
+                                end else begin
+                                    mant_sum = mant_sum << 1;
+                                    result_exp = result_exp - 1;
+                                end
                             end
                         end
                         
@@ -123,7 +127,8 @@ module fp_adder (
                 
                 DONE: begin
                     done <= 1'b1;
-                    state <= IDLE;
+                    if (!start)
+                        state <= IDLE;
                 end
                 
                 default: state <= IDLE;

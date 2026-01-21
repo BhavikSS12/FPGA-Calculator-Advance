@@ -1,5 +1,4 @@
-
-`include "common/alu_defines.v"
+`include "alu_defines.v"
 
 module calculator_top (
     input wire clk,
@@ -9,11 +8,11 @@ module calculator_top (
     input wire [3:0] operation,
     input wire alu_mode,           // 0=Fixed, 1=Float
     input wire start,
-    output reg [31:0] result,
-    output reg done,
-    output reg overflow,
-    output reg underflow,
-    output reg div_by_zero
+    output wire [31:0] result,
+    output wire done,
+    output wire overflow,
+    output wire underflow,
+    output wire div_by_zero
 );
 
     // Fixed-point ALU signals
@@ -45,29 +44,24 @@ module calculator_top (
         .div_by_zero(fixed_div_by_zero)
     );
     
-    // Instantiate Floating-Point ALU (use your fp_alu.v from before)
-    // For now, placeholder - you would instantiate fp_alu here
-    assign float_result = 32'h0;
-    assign float_done = 1'b0;
-    assign float_overflow = 1'b0;
-    assign float_underflow = 1'b0;
-    assign float_div_by_zero = 1'b0;
+    fp_alu float_alu_inst (
+        .clk(clk),
+        .reset(reset),
+        .operand_a(operand_a),
+        .operand_b(operand_b),
+        .operation(operation),
+        .start(start && (alu_mode == `MODE_FLOAT)),
+        .result(float_result),
+        .done(float_done),
+        .overflow(float_overflow),
+        .underflow(float_underflow),
+        .invalid(float_div_by_zero)
+    );
     
-    // Output multiplexer
-    always @(*) begin
-        if (alu_mode == `MODE_FIXED) begin
-            result = fixed_result;
-            done = fixed_done;
-            overflow = fixed_overflow;
-            underflow = fixed_underflow;
-            div_by_zero = fixed_div_by_zero;
-        end else begin
-            result = float_result;
-            done = float_done;
-            overflow = float_overflow;
-            underflow = float_underflow;
-            div_by_zero = float_div_by_zero;
-        end
-    end
-
+    assign result = (alu_mode == `MODE_FIXED) ? fixed_result : float_result;
+    assign done = (alu_mode == `MODE_FIXED) ? fixed_done : float_done;
+    assign overflow = (alu_mode == `MODE_FIXED) ? fixed_overflow : float_overflow;
+    assign underflow = (alu_mode == `MODE_FIXED) ? fixed_underflow : float_underflow;
+    assign div_by_zero = (alu_mode == `MODE_FIXED) ? fixed_div_by_zero : float_div_by_zero;
+    
 endmodule

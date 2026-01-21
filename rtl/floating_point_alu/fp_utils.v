@@ -2,18 +2,6 @@
 `ifndef FP_UTILS_V
 `define FP_UTILS_V
 
-// Operation codes
-`define OP_ADD    4'b0000
-`define OP_SUB    4'b0001
-`define OP_MUL    4'b0010
-`define OP_DIV    4'b0011
-`define OP_SQRT   4'b0100
-`define OP_ABS    4'b0101
-`define OP_NEG    4'b0110
-`define OP_CMP    4'b0111
-`define OP_MIN    4'b1000
-`define OP_MAX    4'b1001
-
 // IEEE 754 Constants
 `define FP_ZERO       32'h00000000
 `define FP_ONE        32'h3F800000
@@ -32,5 +20,11 @@
 `define IS_ZERO(x)    ((`FP_EXP(x) == 8'h00) && (`FP_MANT(x) == 23'h0))
 `define IS_INF(x)     ((`FP_EXP(x) == 8'hFF) && (`FP_MANT(x) == 23'h0))
 `define IS_NAN(x)     ((`FP_EXP(x) == 8'hFF) && (`FP_MANT(x) != 23'h0))
+
+`define FP_IS_GREATER(a, b) \
+    ((`FP_SIGN(a) == 0 && `FP_SIGN(b) == 1) || \
+     (`FP_SIGN(a) == `FP_SIGN(b) && \
+     ((`FP_EXP(a) > `FP_EXP(b)) || \
+     ((`FP_EXP(a) == `FP_EXP(b)) && (`FP_MANT(a) > `FP_MANT(b))))))
 
 `endif

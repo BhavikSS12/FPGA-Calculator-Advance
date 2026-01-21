@@ -1,14 +1,14 @@
 `include "fixed_utils.v"
-`include "../common/alu_defines.v"
+`include "alu_defines.v"
 
 module fixed_alu (
     input wire clk,
     input wire reset,
-    input wire [31:0] operand_a,      // Q16.16 format
-    input wire [31:0] operand_b,      // Q16.16 format
+    input wire [31:0] operand_a,      
+    input wire [31:0] operand_b,      
     input wire [3:0] operation,
     input wire start,
-    output reg [31:0] result,         // Q16.16 format
+    output reg [31:0] result,         
     output reg done,
     output reg overflow,
     output reg underflow,
@@ -20,6 +20,8 @@ module fixed_alu (
     localparam IDLE = 2'b00;
     localparam COMPUTE = 2'b01;
     localparam DONE_STATE = 2'b10;
+    reg [31:0] temp_result;
+    reg temp_overflow;
     
     // Internal computation wires
     wire [31:0] add_result;
@@ -73,10 +75,10 @@ module fixed_alu (
     assign abs_result = operand_a[31] ? -operand_a : operand_a;
     assign neg_result = -operand_a;
     
-    // Comparison
+    // Comparison (Q18.14 format)
     assign cmp_result = (operand_a == operand_b) ? `FIXED_ZERO :
                        (operand_a > operand_b) ? `FIXED_ONE : 
-                       {32'hFFFF0000}; // -1.0
+                       32'hFFFFC000; // -1.0 in Q18.14
     
     // Min/Max
     assign min_result = ($signed(operand_a) < $signed(operand_b)) ? operand_a : operand_b;

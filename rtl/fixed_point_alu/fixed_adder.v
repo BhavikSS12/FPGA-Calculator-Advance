@@ -1,4 +1,3 @@
-
 `include "fixed_utils.v"
 
 module fixed_adder (
@@ -8,7 +7,6 @@ module fixed_adder (
     output wire [31:0] result,
     output wire overflow
 );
-
     wire [31:0] b_effective;
     wire [32:0] sum_extended;
     
@@ -23,5 +21,4 @@ module fixed_adder (
     // Overflow: sign bits of inputs match but result differs
     assign overflow = (a[31] == b_effective[31]) && 
                      (result[31] != a[31]);
-
 endmodule

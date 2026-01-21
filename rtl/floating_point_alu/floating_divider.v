@@ -30,6 +30,13 @@ module fp_divider (
     wire a_is_inf = `IS_INF(a);
     wire b_is_inf = `IS_INF(b);
     
+    reg result_sign;
+    reg signed [9:0] result_exp_temp;
+    reg [7:0] result_exp;
+    reg [47:0] mant_quotient;
+    reg [22:0] result_mant;
+    
+    
     always @(posedge clk or posedge reset) begin
         if (reset) begin
             state <= IDLE;
@@ -51,12 +58,6 @@ module fp_divider (
                 end
                 
                 COMPUTE: begin
-                    reg result_sign;
-                    reg signed [9:0] result_exp_temp;
-                    reg [7:0] result_exp;
-                    reg [47:0] mant_quotient;
-                    reg [22:0] result_mant;
-                    
                     if (b_is_zero) begin
                         div_by_zero <= 1'b1;
                         if (a_is_zero) begin
@@ -76,7 +77,7 @@ module fp_divider (
                         result_sign = sign_a ^ sign_b;
                         result_exp_temp = exp_a - exp_b + 127;
                         
-                        mant_quotient = ({mant_a, 24'h0} / mant_b);
+                        mant_quotient = ({mant_a, 24'h0} << 1) / mant_b;
                         
                         if (mant_quotient[24]) begin
                             result_mant = mant_quotient[24:2];
@@ -105,7 +106,8 @@ module fp_divider (
                 
                 DONE: begin
                     done <= 1'b1;
-                    state <= IDLE;
+                    if (!start)
+                        state <= IDLE;
                 end
                 
                 default: state <= IDLE;

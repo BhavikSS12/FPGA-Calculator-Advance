@@ -30,6 +30,13 @@ module fp_multiplier (
     wire a_is_inf = `IS_INF(a);
     wire b_is_inf = `IS_INF(b);
     
+    reg result_sign;
+    reg signed [9:0] result_exp_temp;
+    reg [7:0] result_exp;
+    reg [47:0] mant_product;
+    reg [22:0] result_mant;
+    
+    
     always @(posedge clk or posedge reset) begin
         if (reset) begin
             state <= IDLE;
@@ -48,13 +55,7 @@ module fp_multiplier (
                     end
                 end
                 
-                COMPUTE: begin
-                    reg result_sign;
-                    reg signed [9:0] result_exp_temp;
-                    reg [7:0] result_exp;
-                    reg [47:0] mant_product;
-                    reg [22:0] result_mant;
-                    
+                COMPUTE: begin                    
                     if (a_is_zero || b_is_zero) begin
                         result <= `FP_ZERO;
                     end else if (a_is_inf || b_is_inf) begin
@@ -93,7 +94,8 @@ module fp_multiplier (
                 
                 DONE: begin
                     done <= 1'b1;
-                    state <= IDLE;
+                    if(!start)
+                        state <= IDLE;
                 end
                 
                 default: state <= IDLE;

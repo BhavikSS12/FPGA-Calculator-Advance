@@ -1,23 +1,22 @@
-
 `include "fixed_utils.v"
 
 module fixed_multiplier (
-    input wire [31:0] a,         // Q16.16
-    input wire [31:0] b,         // Q16.16
-    output wire [31:0] result,   // Q16.16
+    input wire [31:0] a,
+    input wire [31:0] b,
+    output wire [31:0] result,
     output wire overflow
 );
-
-    // 32x32 = 64-bit multiplication
     wire signed [63:0] product;
+    wire signed [63:0] product_shifted;
     
+    // Multiply two Q18.14 numbers
     assign product = $signed(a) * $signed(b);
     
-    // Extract Q16.16 result (shift right by 16 to align decimal point)
-    // product[47:16] gives us the Q16.16 result
-    assign result = product[47:16];
+    // Shift right by 14 bits to maintain Q18.14 format
+    assign product_shifted = product >>> 14;
     
-    // Overflow detection: check if upper bits are not sign extension
-    assign overflow = (product[63:48] != {16{product[47]}});
-
+    // Check for overflow: if bits [63:31] are not all same as bit [31]
+    assign overflow = !(product_shifted[63:31] == {33{product_shifted[31]}});
+    
+    assign result = product_shifted[31:0];
 endmodule
