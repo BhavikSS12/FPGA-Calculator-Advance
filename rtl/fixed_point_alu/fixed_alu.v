@@ -1,5 +1,5 @@
 `include "fixed_utils.v"
-`include "alu_defines.v"
+`include "C:\Users\BHAVIK\Desktop\Bhavik_clg\Projects\vlsi_projects\FPGA-Calculator-Advance\rtl\alu_defines.v"
 
 module fixed_alu (
     input wire clk,
@@ -19,9 +19,8 @@ module fixed_alu (
     reg [1:0] state;
     localparam IDLE = 2'b00;
     localparam COMPUTE = 2'b01;
-    localparam DONE_STATE = 2'b10;
-    reg [31:0] temp_result;
-    reg temp_overflow;
+    localparam WAIT_SPECIAL = 2'b10;
+    localparam DONE_STATE = 2'b11;
     
     // Internal computation wires
     wire [31:0] add_result;
@@ -41,6 +40,13 @@ module fixed_alu (
     wire [31:0] max_result;
     
     wire add_overflow, mul_overflow;
+    
+    // Special operations interface
+    reg special_start;
+    wire [31:0] special_result;
+    wire special_done;
+    wire special_overflow;
+    reg [3:0] special_op;
     
     // Instantiate sub-modules
     fixed_adder adder (
@@ -66,6 +72,19 @@ module fixed_alu (
         .div_by_zero(div_by_zero)
     );
     
+    // Instantiate special operations module
+    fixed_special_operations special_ops (
+        .clk(clk),
+        .reset(reset),
+        .operand_a(operand_a),
+        .operand_b(operand_b),
+        .operation(special_op),
+        .start(special_start),
+        .result(special_result),
+        .done(special_done),
+        .overflow(special_overflow)
+    );
+    
     // Simple combinational operations
     assign and_result = operand_a & operand_b;
     assign or_result = operand_a | operand_b;
@@ -84,6 +103,14 @@ module fixed_alu (
     assign min_result = ($signed(operand_a) < $signed(operand_b)) ? operand_a : operand_b;
     assign max_result = ($signed(operand_a) > $signed(operand_b)) ? operand_a : operand_b;
     
+    // Determine if operation is special (requires special ops module)
+    function is_special_op;
+        input [3:0] op;
+        begin
+            is_special_op = (op >= 4'h10); // Assuming special ops start from 0x10
+        end
+    endfunction
+    
     // Main control logic
     always @(posedge clk or posedge reset) begin
         if (reset) begin
@@ -92,14 +119,25 @@ module fixed_alu (
             done <= 1'b0;
             overflow <= 1'b0;
             underflow <= 1'b0;
+            special_start <= 1'b0;
+            special_op <= 4'h0;
         end else begin
             case (state)
                 IDLE: begin
                     done <= 1'b0;
                     overflow <= 1'b0;
                     underflow <= 1'b0;
+                    special_start <= 1'b0;
+                    
                     if (start) begin
-                        state <= COMPUTE;
+                        if (is_special_op(operation)) begin
+                            // Map ALU operation to special operation
+                            special_op <= operation - 4'h10; // Offset mapping
+                            special_start <= 1'b1;
+                            state <= WAIT_SPECIAL;
+                        end else begin
+                            state <= COMPUTE;
+                        end
                     end
                 end
                 
@@ -136,6 +174,16 @@ module fixed_alu (
                         default: result <= `FIXED_ZERO;
                     endcase
                     state <= DONE_STATE;
+                end
+                
+                WAIT_SPECIAL: begin
+                    special_start <= 1'b0; // De-assert start after one cycle
+                    
+                    if (special_done) begin
+                        result <= special_result;
+                        overflow <= special_overflow;
+                        state <= DONE_STATE;
+                    end
                 end
                 
                 DONE_STATE: begin

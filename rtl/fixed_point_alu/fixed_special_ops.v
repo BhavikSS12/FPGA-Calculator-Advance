@@ -18,10 +18,7 @@ module fixed_special_operations (
     localparam OP_POW3     = 4'h2;  // Power of 3 (a^3)
     localparam OP_RECIP    = 4'h3;  // Reciprocal (1/a)
     localparam OP_AVG      = 4'h4;  // Average (a+b)/2
-    localparam OP_LERP     = 4'h5;  // Linear interpolation
-    localparam OP_CLAMP    = 4'h6;  // Clamp value between min and max
-    localparam OP_ROUND    = 4'h7;  // Round to nearest integer
-    localparam OP_MAD      = 4'h8;  // Multiply-accumulate (a*b + result)
+    localparam OP_ROUND    = 4'h5;  // Round to nearest integer
 
     // State machine
     reg [2:0] state;
@@ -33,12 +30,6 @@ module fixed_special_operations (
     // Iteration counter for iterative operations
     reg [4:0] iteration;
     reg [31:0] temp_x, temp_estimate;
-    
-    // Internal wires
-    wire signed [63:0] mul_temp;
-    wire signed [63:0] div_temp;
-    wire [31:0] sqrt_result;
-    wire [31:0] recip_result;
     
     // Square root using Newton-Raphson (iterative)
     // x_{n+1} = (x_n + a/x_n) / 2
@@ -61,9 +52,9 @@ module fixed_special_operations (
     wire [31:0] pow3_result;
     wire [31:0] avg_result;
     wire [31:0] round_result;
-    wire [31:0] mad_result;
 
     // Power of 2: a * a
+    wire signed [63:0] mul_temp;
     assign mul_temp = ($signed(operand_a) * $signed(operand_a)) >>> 14;
     assign pow2_result = mul_temp[31:0];
 
@@ -80,11 +71,6 @@ module fixed_special_operations (
     wire [31:0] rounded_with_half;
     assign rounded_with_half = $signed(operand_a) + `FIXED_HALF;
     assign round_result = {rounded_with_half[31:14], 14'h0};
-
-    // Multiply-accumulate: a * b + current result
-    wire signed [63:0] mad_mul;
-    assign mad_mul = ($signed(operand_a) * $signed(operand_b)) >>> 14;
-    assign mad_result = mad_mul[31:0] + result;
 
     // Main state machine
     always @(posedge clk or posedge reset) begin
@@ -168,11 +154,6 @@ module fixed_special_operations (
 
                         OP_ROUND: begin
                             result <= round_result;
-                            state <= DONE_STATE;
-                        end
-
-                        OP_MAD: begin
-                            result <= mad_result;
                             state <= DONE_STATE;
                         end
 
